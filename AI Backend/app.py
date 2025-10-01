@@ -36,29 +36,46 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ==============================
 # MODELS PER ENDPOINT (Meta Models)
 # ==============================
+
+# 1. Crop Doctor
 crop_template = PromptTemplate(
     input_variables=["symptoms"],
     template="You are an agricultural crop doctor. A farmer reports: {symptoms}. Diagnose the most likely disease and suggest treatments in simple farmer-friendly language."
 )
-crop_llm = HuggingFaceEndpoint(repo_id="meta-llama/Llama-2-7b-chat-hf", task="text-generation")
+crop_llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Llama-2-7b-chat-hf",
+    task="conversational"
+)
 
+# 2. Multilingual Chat
 chat_template = PromptTemplate(
     input_variables=["query"],
     template="You are a multilingual AI assistant for farmers. Answer clearly in the same language as the user. Farmer says: {query}"
 )
-chat_llm = HuggingFaceEndpoint(repo_id="meta-llama/Llama-2-13b-chat-hf", task="text-generation")
+chat_llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Llama-2-13b-chat-hf",
+    task="conversational"
+)
 
+# 3. Disaster Summarizer
 disaster_template = PromptTemplate(
     input_variables=["report"],
     template="You are an AI disaster assistant. Summarize the following report for farmers in simple steps: {report}"
 )
-disaster_llm = HuggingFaceEndpoint(repo_id="meta-llama/Llama-2-7b-chat-hf", task="text-generation")
+disaster_llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Llama-2-7b-chat-hf",
+    task="conversational"
+)
 
+# 4. Marketplace Recommendation
 market_template = PromptTemplate(
     input_variables=["product"],
     template="You are an agricultural marketplace recommender. Farmer wants to sell or buy: {product}. Suggest possible matches and advice."
 )
-market_llm = HuggingFaceEndpoint(repo_id="meta-llama/Llama-2-13b-chat-hf", task="text-generation")
+market_llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Llama-2-13b-chat-hf",
+    task="conversational"
+)
 
 # ==============================
 # ENDPOINTS
@@ -67,7 +84,7 @@ market_llm = HuggingFaceEndpoint(repo_id="meta-llama/Llama-2-13b-chat-hf", task=
 async def crop_doctor(symptoms: str):
     prompt = crop_template.format(symptoms=symptoms)
     try:
-        response = crop_llm.invoke(prompt)  # ✅ FIXED
+        response = crop_llm.invoke(prompt)
         return {"diagnosis": response}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
@@ -76,7 +93,7 @@ async def crop_doctor(symptoms: str):
 async def multilingual_chat(query: str):
     prompt = chat_template.format(query=query)
     try:
-        response = chat_llm.invoke(prompt)  # ✅ FIXED
+        response = chat_llm.invoke(prompt)
         return {"reply": response}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
@@ -85,7 +102,7 @@ async def multilingual_chat(query: str):
 async def disaster_summarizer(report: str):
     prompt = disaster_template.format(report=report)
     try:
-        response = disaster_llm.invoke(prompt)  # ✅ FIXED
+        response = disaster_llm.invoke(prompt)
         return {"summary": response}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
@@ -94,7 +111,7 @@ async def disaster_summarizer(report: str):
 async def marketplace(product: str):
     prompt = market_template.format(product=product)
     try:
-        response = market_llm.invoke(prompt)  # ✅ FIXED
+        response = market_llm.invoke(prompt)
         return {"recommendation": response}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}

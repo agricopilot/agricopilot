@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
 from huggingface_hub.utils import HfHubHTTPError
+from langchain.schema import HumanMessage  # ✅ For conversational inputs
 from vector import query_vector
 
 # ==============================
@@ -34,7 +35,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 # ==============================
-# MODELS PER ENDPOINT (Meta Models)
+# MODELS PER ENDPOINT (Meta Models, Conversational)
 # ==============================
 
 # 1. Crop Doctor
@@ -84,8 +85,8 @@ market_llm = HuggingFaceEndpoint(
 async def crop_doctor(symptoms: str):
     prompt = crop_template.format(symptoms=symptoms)
     try:
-        response = crop_llm.invoke(prompt)
-        return {"diagnosis": response}
+        response = crop_llm.invoke([HumanMessage(content=prompt)])  # ✅ FIXED
+        return {"diagnosis": str(response)}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
 
@@ -93,8 +94,8 @@ async def crop_doctor(symptoms: str):
 async def multilingual_chat(query: str):
     prompt = chat_template.format(query=query)
     try:
-        response = chat_llm.invoke(prompt)
-        return {"reply": response}
+        response = chat_llm.invoke([HumanMessage(content=prompt)])  # ✅ FIXED
+        return {"reply": str(response)}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
 
@@ -102,8 +103,8 @@ async def multilingual_chat(query: str):
 async def disaster_summarizer(report: str):
     prompt = disaster_template.format(report=report)
     try:
-        response = disaster_llm.invoke(prompt)
-        return {"summary": response}
+        response = disaster_llm.invoke([HumanMessage(content=prompt)])  # ✅ FIXED
+        return {"summary": str(response)}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
 
@@ -111,8 +112,8 @@ async def disaster_summarizer(report: str):
 async def marketplace(product: str):
     prompt = market_template.format(product=product)
     try:
-        response = market_llm.invoke(prompt)
-        return {"recommendation": response}
+        response = market_llm.invoke([HumanMessage(content=prompt)])  # ✅ FIXED
+        return {"recommendation": str(response)}
     except HfHubHTTPError as e:
         return {"error": f"HuggingFace error: {str(e)}"}
 

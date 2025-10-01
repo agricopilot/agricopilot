@@ -44,7 +44,7 @@ crop_template = PromptTemplate(
     template="You are an agricultural crop doctor. A farmer reports: {symptoms}. Diagnose the most likely disease and suggest treatments in simple farmer-friendly language."
 )
 crop_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-2-7b-chat-hf",
+    repo_id="meta-llama/Llama-3.2-11B-Vision-Instruct",
     task="conversational"
 )
 
@@ -54,7 +54,7 @@ chat_template = PromptTemplate(
     template="You are a multilingual AI assistant for farmers. Answer clearly in the same language as the user. Farmer says: {query}"
 )
 chat_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-2-13b-chat-hf",
+    repo_id="meta-llama/Llama-3.1-8B-Instruct",
     task="conversational"
 )
 
@@ -64,7 +64,7 @@ disaster_template = PromptTemplate(
     template="You are an AI disaster assistant. Summarize the following report for farmers in simple steps: {report}"
 )
 disaster_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-2-7b-chat-hf",
+    repo_id="meta-llama/Llama-3.1-8B-Instruct",
     task="conversational"
 )
 
@@ -74,7 +74,7 @@ market_template = PromptTemplate(
     template="You are an agricultural marketplace recommender. Farmer wants to sell or buy: {product}. Suggest possible matches and advice."
 )
 market_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-2-13b-chat-hf",
+    repo_id="meta-llama/Llama-3.1-8B-Instruct",
     task="conversational"
 )
 

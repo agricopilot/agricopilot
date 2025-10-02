@@ -10,3 +10,7 @@ langchain-huggingface
 kagglehub
 pandas
 datasets
+transformers
+accelerate
+torch
+sentencepiece

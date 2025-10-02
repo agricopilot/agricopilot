@@ -68,46 +68,67 @@ class VectorRequest(BaseModel):
     query: str
 
 # ==============================
-# MODELS PER ENDPOINT
+# MODELS PER ENDPOINT (Meta Models, Conversational)
 # ==============================
+
+# 1. Crop Doctor
 crop_template = PromptTemplate(
     input_variables=["symptoms"],
     template="You are AgriCopilot, a multilingual AI assistant created to support farmers. Farmer reports: {symptoms}. Diagnose the most likely disease and suggest treatments in simple farmer-friendly language."
 )
 crop_llm = HuggingFaceEndpoint(
     repo_id="meta-llama/Llama-3.2-11B-Vision-Instruct",
-    temperature=0.3, top_p=0.9, do_sample=True,
-    repetition_penalty=1.1, max_new_tokens=1024
+    task="conversational",   # ✅ FIXED
+    temperature=0.3,
+    top_p=0.9,
+    do_sample=True,
+    repetition_penalty=1.1,
+    max_new_tokens=1024
 )
 
+# 2. Multilingual Chat
 chat_template = PromptTemplate(
     input_variables=["query"],
     template="You are AgriCopilot, a supportive multilingual AI guide built for farmers. Farmer says: {query}"
 )
 chat_llm = HuggingFaceEndpoint(
     repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    temperature=0.3, top_p=0.9, do_sample=True,
-    repetition_penalty=1.1, max_new_tokens=1024
+    task="conversational",   # ✅ FIXED
+    temperature=0.3,
+    top_p=0.9,
+    do_sample=True,
+    repetition_penalty=1.1,
+    max_new_tokens=1024
 )
 
+# 3. Disaster Summarizer
 disaster_template = PromptTemplate(
     input_variables=["report"],
     template="You are AgriCopilot, an AI disaster-response assistant. Summarize in simple steps: {report}"
 )
 disaster_llm = HuggingFaceEndpoint(
     repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    temperature=0.3, top_p=0.9, do_sample=True,
-    repetition_penalty=1.1, max_new_tokens=1024
+    task="conversational",   # ✅ FIXED
+    temperature=0.3,
+    top_p=0.9,
+    do_sample=True,
+    repetition_penalty=1.1,
+    max_new_tokens=1024
 )
 
+# 4. Marketplace Recommendation
 market_template = PromptTemplate(
     input_variables=["product"],
     template="You are AgriCopilot, an AI agricultural marketplace advisor. Farmer wants to sell or buy: {product}. Suggest best options and advice."
 )
 market_llm = HuggingFaceEndpoint(
     repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    temperature=0.3, top_p=0.9, do_sample=True,
-    repetition_penalty=1.1, max_new_tokens=1024
+    task="conversational",   # ✅ FIXED
+    temperature=0.3,
+    top_p=0.9,
+    do_sample=True,
+    repetition_penalty=1.1,
+    max_new_tokens=1024
 )
 
 # ==============================

@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
 from huggingface_hub.utils import HfHubHTTPError
-from langchain.schema import HumanMessage
 from vector import query_vector
 
 # ==============================
@@ -28,10 +27,12 @@ async def root():
 # ==============================
 # AUTH CONFIG
 # ==============================
-PROJECT_API_KEY = "agricopilot404"  # 🔑 Fixed bearer token for hackathon
+PROJECT_API_KEY = os.getenv("PROJECT_API_KEY")
 
 def check_auth(authorization: str | None):
     """Validate Bearer token against PROJECT_API_KEY"""
+    if not PROJECT_API_KEY:  # If key not set, skip validation
+        return
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     token = authorization.split(" ", 1)[1]
@@ -68,68 +69,76 @@ class VectorRequest(BaseModel):
     query: str
 
 # ==============================
-# MODELS PER ENDPOINT (Meta Models, Conversational)
+# PROMPTS
 # ==============================
-
-# 1. Crop Doctor
 crop_template = PromptTemplate(
     input_variables=["symptoms"],
     template="You are AgriCopilot, a multilingual AI assistant created to support farmers. Farmer reports: {symptoms}. Diagnose the most likely disease and suggest treatments in simple farmer-friendly language."
 )
-crop_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.2-11B-Vision-Instruct",
-    task="conversational",   # ✅ FIXED
-    temperature=0.3,
-    top_p=0.9,
-    do_sample=True,
-    repetition_penalty=1.1,
-    max_new_tokens=1024
-)
 
-# 2. Multilingual Chat
 chat_template = PromptTemplate(
     input_variables=["query"],
     template="You are AgriCopilot, a supportive multilingual AI guide built for farmers. Farmer says: {query}"
 )
-chat_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    task="conversational",   # ✅ FIXED
-    temperature=0.3,
-    top_p=0.9,
-    do_sample=True,
-    repetition_penalty=1.1,
-    max_new_tokens=1024
-)
 
-# 3. Disaster Summarizer
 disaster_template = PromptTemplate(
     input_variables=["report"],
     template="You are AgriCopilot, an AI disaster-response assistant. Summarize in simple steps: {report}"
 )
-disaster_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    task="conversational",   # ✅ FIXED
-    temperature=0.3,
-    top_p=0.9,
-    do_sample=True,
-    repetition_penalty=1.1,
-    max_new_tokens=1024
-)
 
-# 4. Marketplace Recommendation
 market_template = PromptTemplate(
     input_variables=["product"],
     template="You are AgriCopilot, an AI agricultural marketplace advisor. Farmer wants to sell or buy: {product}. Suggest best options and advice."
 )
-market_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.1-8B-Instruct",
-    task="conversational",   # ✅ FIXED
-    temperature=0.3,
-    top_p=0.9,
-    do_sample=True,
-    repetition_penalty=1.1,
-    max_new_tokens=1024
-)
+
+# ==============================
+# HuggingFace Models (Explicit Args)
+# ==============================
+def make_llm(repo_id: str):
+    return HuggingFaceEndpoint(
+        repo_id=repo_id,
+        task="conversational",
+        temperature=0.3,
+        top_p=0.9,
+        do_sample=True,
+        repetition_penalty=1.1,
+        max_new_tokens=1024
+    )
+
+crop_llm = make_llm("meta-llama/Llama-3.2-11B-Vision-Instruct")
+chat_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
+disaster_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
+market_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
+
+# ==============================
+# ENDPOINT HELPERS
+# ==============================
+def run_conversational_model(model, prompt: str):
+    """Wraps prompt into HF conversational format and extracts text"""
+    payload = {
+        "inputs": {
+            "past_user_inputs": [],
+            "generated_responses": [],
+            "text": prompt
+        }
+    }
+    try:
+        logger.info(f"Sending to HF model: {payload}")
+        result = model.invoke(payload)
+        logger.info(f"HF raw response: {result}")
+    except HfHubHTTPError as e:
+        if "exceeded" in str(e).lower() or "quota" in str(e).lower():
+            return "⚠️ HuggingFace daily quota reached. Try again later."
+        return f"⚠️ HuggingFace error: {str(e)}"
+    except Exception as e:
+        return f"⚠️ Unexpected model error: {str(e)}"
+
+    # Parse output
+    if isinstance(result, dict) and "generated_text" in result:
+        return result["generated_text"]
+    if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
+        return result[0]["generated_text"]
+    return str(result)
 
 # ==============================
 # ENDPOINTS
@@ -138,32 +147,35 @@ market_llm = HuggingFaceEndpoint(
 async def crop_doctor(req: CropRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     prompt = crop_template.format(symptoms=req.symptoms)
-    response = crop_llm.invoke([HumanMessage(content=prompt)])
-    return {"diagnosis": str(response)}
+    response = run_conversational_model(crop_llm, prompt)
+    return {"diagnosis": response}
 
 @app.post("/multilingual-chat")
 async def multilingual_chat(req: ChatRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     prompt = chat_template.format(query=req.query)
-    response = chat_llm.invoke([HumanMessage(content=prompt)])
-    return {"reply": str(response)}
+    response = run_conversational_model(chat_llm, prompt)
+    return {"reply": response}
 
 @app.post("/disaster-summarizer")
 async def disaster_summarizer(req: DisasterRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     prompt = disaster_template.format(report=req.report)
-    response = disaster_llm.invoke([HumanMessage(content=prompt)])
-    return {"summary": str(response)}
+    response = run_conversational_model(disaster_llm, prompt)
+    return {"summary": response}
 
 @app.post("/marketplace")
 async def marketplace(req: MarketRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     prompt = market_template.format(product=req.product)
-    response = market_llm.invoke([HumanMessage(content=prompt)])
-    return {"recommendation": str(response)}
+    response = run_conversational_model(market_llm, prompt)
+    return {"recommendation": response}
 
 @app.post("/vector-search")
 async def vector_search(req: VectorRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
-    results = query_vector(req.query)
-    return {"results": results}
+    try:
+        results = query_vector(req.query)
+        return {"results": results}
+    except Exception as e:
+        return {"error": f"Vector search error: {str(e)}"}

@@ -2,7 +2,6 @@ import os
 import logging
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEndpoint
@@ -27,7 +26,7 @@ async def root():
 # ==============================
 # AUTH CONFIG
 # ==============================
-PROJECT_API_KEY = os.getenv("PROJECT_API_KEY")
+PROJECT_API_KEY = os.getenv("PROJECT_API_KEY", "agricopilot404")
 
 def check_auth(authorization: str | None):
     """Validate Bearer token against PROJECT_API_KEY"""
@@ -92,12 +91,12 @@ market_template = PromptTemplate(
 )
 
 # ==============================
-# HuggingFace Models (Explicit Args)
+# HuggingFace Models
 # ==============================
 def make_llm(repo_id: str):
     return HuggingFaceEndpoint(
         repo_id=repo_id,
-        task="conversational",
+        task="conversational",  # important
         temperature=0.3,
         top_p=0.9,
         do_sample=True,
@@ -114,31 +113,28 @@ market_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
 # ENDPOINT HELPERS
 # ==============================
 def run_conversational_model(model, prompt: str):
-    """Wraps prompt into HF conversational format and extracts text"""
-    payload = {
-        "inputs": {
-            "past_user_inputs": [],
-            "generated_responses": [],
-            "text": prompt
-        }
-    }
+    """Send plain text prompt to HuggingFaceEndpoint and capture response"""
     try:
-        logger.info(f"Sending to HF model: {payload}")
-        result = model.invoke(payload)
+        logger.info(f"Sending prompt to HF model: {prompt}")
+        result = model.invoke(prompt)   # ✅ FIX: pass string not dict
         logger.info(f"HF raw response: {result}")
     except HfHubHTTPError as e:
         if "exceeded" in str(e).lower() or "quota" in str(e).lower():
-            return "⚠️ HuggingFace daily quota reached. Try again later."
-        return f"⚠️ HuggingFace error: {str(e)}"
+            return {"parsed": None, "raw": "⚠️ HuggingFace daily quota reached. Try again later."}
+        return {"parsed": None, "raw": f"⚠️ HuggingFace error: {str(e)}"}
     except Exception as e:
-        return f"⚠️ Unexpected model error: {str(e)}"
+        return {"parsed": None, "raw": f"⚠️ Unexpected model error: {str(e)}"}
 
     # Parse output
+    parsed_text = None
     if isinstance(result, dict) and "generated_text" in result:
-        return result["generated_text"]
-    if isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
-        return result[0]["generated_text"]
-    return str(result)
+        parsed_text = result["generated_text"]
+    elif isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
+        parsed_text = result[0]["generated_text"]
+    else:
+        parsed_text = str(result)
+
+    return {"parsed": parsed_text, "raw": result}
 
 # ==============================
 # ENDPOINTS

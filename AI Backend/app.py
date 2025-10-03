@@ -1,11 +1,12 @@
 import os
 import logging
-from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi import FastAPI, Request, Header, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from langchain.prompts import PromptTemplate
-from langchain_huggingface import HuggingFaceEndpoint
-from huggingface_hub.utils import HfHubHTTPError
+from langchain.chat_models import ChatHF
+from langchain.schema import HumanMessage, AIMessage
+from PIL import Image
+import io
 from vector import query_vector
 
 # ==============================
@@ -29,8 +30,7 @@ async def root():
 PROJECT_API_KEY = os.getenv("PROJECT_API_KEY", "agricopilot404")
 
 def check_auth(authorization: str | None):
-    """Validate Bearer token against PROJECT_API_KEY"""
-    if not PROJECT_API_KEY:  # If key not set, skip validation
+    if not PROJECT_API_KEY:
         return
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
@@ -52,9 +52,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ==============================
 # Request Models
 # ==============================
-class CropRequest(BaseModel):
-    symptoms: str
-
 class ChatRequest(BaseModel):
     query: str
 
@@ -68,104 +65,69 @@ class VectorRequest(BaseModel):
     query: str
 
 # ==============================
-# PROMPTS
+# HuggingFace Chat Models
 # ==============================
-crop_template = PromptTemplate(
-    input_variables=["symptoms"],
-    template="You are AgriCopilot, a multilingual AI assistant created to support farmers. Farmer reports: {symptoms}. Diagnose the most likely disease and suggest treatments in simple farmer-friendly language."
-)
+chat_model = ChatHF(model_name="meta-llama/Llama-3.1-8B-Instruct", temperature=0.3)
+disaster_model = ChatHF(model_name="meta-llama/Llama-3.1-8B-Instruct", temperature=0.3)
+market_model = ChatHF(model_name="meta-llama/Llama-3.1-8B-Instruct", temperature=0.3)
 
-chat_template = PromptTemplate(
-    input_variables=["query"],
-    template="You are AgriCopilot, a supportive multilingual AI guide built for farmers. Farmer says: {query}"
-)
-
-disaster_template = PromptTemplate(
-    input_variables=["report"],
-    template="You are AgriCopilot, an AI disaster-response assistant. Summarize in simple steps: {report}"
-)
-
-market_template = PromptTemplate(
-    input_variables=["product"],
-    template="You are AgriCopilot, an AI agricultural marketplace advisor. Farmer wants to sell or buy: {product}. Suggest best options and advice."
-)
+# Crop Doctor Vision + Language Model
+crop_model = ChatHF(model_name="meta-llama/Llama-3.2-11B-Vision-Instruct", temperature=0.3)
 
 # ==============================
-# HuggingFace Models
+# Helper Functions
 # ==============================
-def make_llm(repo_id: str):
-    return HuggingFaceEndpoint(
-        repo_id=repo_id,
-        task="conversational",  # conversational for HF models
-        temperature=0.3,
-        top_p=0.9,
-        do_sample=True,
-        repetition_penalty=1.1,
-        max_new_tokens=1024
-    )
-
-crop_llm = make_llm("meta-llama/Llama-3.2-11B-Vision-Instruct")
-chat_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
-disaster_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
-market_llm = make_llm("meta-llama/Llama-3.1-8B-Instruct")
-
-# ==============================
-# ENDPOINT HELPERS
-# ==============================
-def run_conversational_model(model, prompt: str):
-    """Send plain text prompt to HuggingFaceEndpoint and capture response"""
+def run_chat_model(model, prompt: str):
     try:
-        logger.info(f"Sending prompt to HF model: {prompt}")
-        # Pass prompt as a list of messages for conversational models
-        result = model.invoke([{"role": "user", "content": prompt}])
-        logger.info(f"HF raw response: {result}")
-    except HfHubHTTPError as e:
-        if "exceeded" in str(e).lower() or "quota" in str(e).lower():
-            return {"parsed": None, "raw": "⚠️ HuggingFace daily quota reached. Try again later."}
-        return {"parsed": None, "raw": f"⚠️ HuggingFace error: {str(e)}"}
+        response = model([HumanMessage(content=prompt)])
+        return response.content
     except Exception as e:
-        return {"parsed": None, "raw": f"⚠️ Unexpected model error: {str(e)}"}
+        logger.error(f"Model error: {e}")
+        return f"⚠️ Unexpected model error: {str(e)}"
 
-    # Parse output
-    parsed_text = None
-    if isinstance(result, list) and len(result) > 0 and "content" in result[0]:
-        parsed_text = result[0]["content"]
-    elif isinstance(result, dict) and "generated_text" in result:
-        parsed_text = result["generated_text"]
-    else:
-        parsed_text = str(result)
-
-    return {"parsed": parsed_text, "raw": result}
+def run_crop_doctor_model(model, image_bytes: bytes, symptoms: str):
+    """Send image + text to vision-language model"""
+    try:
+        # Convert bytes to image
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple language."
+        # ChatHF allows messages with image objects as content
+        response = model([HumanMessage(content=prompt, additional_kwargs={"image": image})])
+        return response.content
+    except Exception as e:
+        logger.error(f"Crop Doctor model error: {e}")
+        return f"⚠️ Unexpected model error: {str(e)}"
 
 # ==============================
 # ENDPOINTS
 # ==============================
 @app.post("/crop-doctor")
-async def crop_doctor(req: CropRequest, authorization: str | None = Header(None)):
+async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
+    """
+    Receives crop image and symptom description.
+    Returns diagnosis and suggested treatment.
+    """
     check_auth(authorization)
-    prompt = crop_template.format(symptoms=req.symptoms)
-    response = run_conversational_model(crop_llm, prompt)
-    return {"diagnosis": response}
+    image_bytes = await image.read()
+    result = run_crop_doctor_model(crop_model, image_bytes, symptoms)
+    return {"diagnosis": result}
 
 @app.post("/multilingual-chat")
 async def multilingual_chat(req: ChatRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
-    prompt = chat_template.format(query=req.query)
-    response = run_conversational_model(chat_llm, prompt)
+    response = run_chat_model(chat_model, req.query)
     return {"reply": response}
 
 @app.post("/disaster-summarizer")
 async def disaster_summarizer(req: DisasterRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
-    prompt = disaster_template.format(report=req.report)
-    response = run_conversational_model(disaster_llm, prompt)
+    response = run_chat_model(disaster_model, req.report)
     return {"summary": response}
 
 @app.post("/marketplace")
 async def marketplace(req: MarketRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
-    prompt = market_template.format(product=req.product)
-    response = run_conversational_model(market_llm, prompt)
+    response = run_chat_model(market_model, req.product)
     return {"recommendation": response}
 
 @app.post("/vector-search")

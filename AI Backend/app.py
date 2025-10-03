@@ -3,8 +3,8 @@ import logging
 from fastapi import FastAPI, Request, Header, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from langchain.chat_models import ChatHF
-from langchain.schema import HumanMessage, AIMessage
+from langchain_community.chat_models import ChatHF
+from langchain.schema import HumanMessage
 from PIL import Image
 import io
 from vector import query_vector

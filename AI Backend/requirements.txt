@@ -14,3 +14,4 @@ transformers
 accelerate
 torch
 sentencepiece
+langchain-community

@@ -11,3 +11,4 @@ accelerate
 torch
 sentencepiece
 kagglehub
+langdetect

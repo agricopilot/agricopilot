@@ -1,11 +1,11 @@
 import os
 import logging
+import io
 from fastapi import FastAPI, Request, Header, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from transformers import pipeline
 from PIL import Image
-import io
 from vector import query_vector
 
 # ==============================
@@ -66,13 +66,15 @@ class VectorRequest(BaseModel):
 # ==============================
 # HuggingFace Pipelines
 # ==============================
-# Conversational models for chat, disaster, marketplace
-chat_pipe = pipeline("conversational", model="meta-llama/Llama-3.1-8B-Instruct")
-disaster_pipe = pipeline("conversational", model="meta-llama/Llama-3.1-8B-Instruct")
-market_pipe = pipeline("conversational", model="meta-llama/Llama-3.1-8B-Instruct")
-
-# Crop Doctor: image + text
-crop_pipe = pipeline("image-to-text", model="meta-llama/Llama-3.2-11B-Vision-Instruct")
+try:
+    chat_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
+    disaster_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
+    market_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
+    crop_pipe = pipeline("image-to-text", model="Salesforce/blip-image-captioning-large")
+    logger.info("All pipelines loaded successfully.")
+except Exception as e:
+    logger.error(f"Error loading pipelines: {e}")
+    raise RuntimeError("Pipelines failed to load. Check model availability.")
 
 # ==============================
 # Helper Functions
@@ -80,7 +82,6 @@ crop_pipe = pipeline("image-to-text", model="meta-llama/Llama-3.2-11B-Vision-Ins
 def run_conversational(pipe, prompt: str):
     try:
         output = pipe(prompt)
-        # output is a list of dicts
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)
@@ -91,43 +92,53 @@ def run_conversational(pipe, prompt: str):
 def run_crop_doctor(image_bytes: bytes, symptoms: str):
     try:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple language."
+        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple terms."
         output = crop_pipe(image, prompt=prompt)
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)
     except Exception as e:
         logger.error(f"Crop Doctor pipeline error: {e}")
-        return f"⚠️ Unexpected model error: {str(e)}"
+        return f"⚠️ Unexpected vision model error: {str(e)}"
 
 # ==============================
 # ENDPOINTS
 # ==============================
+
+# 🌱 Crop Doctor
 @app.post("/crop-doctor")
-async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
+async def crop_doctor(
+    symptoms: str = Header(...),
+    image: UploadFile = File(...),
+    authorization: str | None = Header(None)
+):
     check_auth(authorization)
     image_bytes = await image.read()
     diagnosis = run_crop_doctor(image_bytes, symptoms)
     return {"diagnosis": diagnosis}
 
+# 🗣 Multilingual Chat
 @app.post("/multilingual-chat")
 async def multilingual_chat(req: ChatRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     reply = run_conversational(chat_pipe, req.query)
     return {"reply": reply}
 
+# 🌪 Disaster Summarizer
 @app.post("/disaster-summarizer")
 async def disaster_summarizer(req: DisasterRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     summary = run_conversational(disaster_pipe, req.report)
     return {"summary": summary}
 
+# 🛒 Marketplace Recommendation
 @app.post("/marketplace")
 async def marketplace(req: MarketRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     recommendation = run_conversational(market_pipe, req.product)
     return {"recommendation": recommendation}
 
+# 🔍 Vector Search
 @app.post("/vector-search")
 async def vector_search(req: VectorRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
@@ -135,4 +146,5 @@ async def vector_search(req: VectorRequest, authorization: str | None = Header(N
         results = query_vector(req.query)
         return {"results": results}
     except Exception as e:
+        logger.error(f"Vector search error: {e}")
         return {"error": f"Vector search error: {str(e)}"}

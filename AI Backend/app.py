@@ -96,7 +96,7 @@ market_template = PromptTemplate(
 def make_llm(repo_id: str):
     return HuggingFaceEndpoint(
         repo_id=repo_id,
-        task="conversational",  # important
+        task="conversational",  # conversational for HF models
         temperature=0.3,
         top_p=0.9,
         do_sample=True,
@@ -116,7 +116,8 @@ def run_conversational_model(model, prompt: str):
     """Send plain text prompt to HuggingFaceEndpoint and capture response"""
     try:
         logger.info(f"Sending prompt to HF model: {prompt}")
-        result = model.invoke(prompt)   # ✅ FIX: pass string not dict
+        # Pass prompt as a list of messages for conversational models
+        result = model.invoke([{"role": "user", "content": prompt}])
         logger.info(f"HF raw response: {result}")
     except HfHubHTTPError as e:
         if "exceeded" in str(e).lower() or "quota" in str(e).lower():
@@ -127,10 +128,10 @@ def run_conversational_model(model, prompt: str):
 
     # Parse output
     parsed_text = None
-    if isinstance(result, dict) and "generated_text" in result:
+    if isinstance(result, list) and len(result) > 0 and "content" in result[0]:
+        parsed_text = result[0]["content"]
+    elif isinstance(result, dict) and "generated_text" in result:
         parsed_text = result["generated_text"]
-    elif isinstance(result, list) and len(result) > 0 and "generated_text" in result[0]:
-        parsed_text = result[0]["generated_text"]
     else:
         parsed_text = str(result)
 

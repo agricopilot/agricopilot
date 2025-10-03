@@ -1,15 +1,15 @@
 import os
 import logging
-import io
 from fastapi import FastAPI, Request, Header, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from transformers import pipeline
 from PIL import Image
+import io
 from vector import query_vector
 
 # ==============================
-# Logging
+# Setup Logging
 # ==============================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AgriCopilot")
@@ -24,7 +24,7 @@ async def root():
     return {"status": "AgriCopilot AI Backend is working perfectly"}
 
 # ==============================
-# Auth
+# AUTH CONFIG
 # ==============================
 PROJECT_API_KEY = os.getenv("PROJECT_API_KEY", "agricopilot404")
 
@@ -66,36 +66,45 @@ class VectorRequest(BaseModel):
 # ==============================
 # HuggingFace Pipelines
 # ==============================
-def load_pipeline(task, model_meta, model_fallback):
-    """Try Meta model, fallback to public."""
+def load_pipeline(task: str, model_meta: str, model_fallback: str = None):
     try:
         return pipeline(task, model=model_meta)
     except Exception as e:
-        logger.warning(f"Meta model {model_meta} unavailable. Using fallback {model_fallback}.")
-        return pipeline(task, model=model_fallback)
+        logger.warning(f"Failed to load {model_meta}: {e}")
+        if model_fallback:
+            logger.info(f"Falling back to {model_fallback}")
+            return pipeline(task, model=model_fallback)
+        raise e
 
-chat_pipe = load_pipeline("conversational",
-                          model_meta="meta-llama/Llama-3.1-8B-Instruct",
-                          model_fallback="microsoft/DialoGPT-medium")
+# Public LLM pipelines (text-generation)
+chat_pipe = load_pipeline(
+    "text-generation",
+    model_meta="tiiuae/falcon-7b-instruct",
+    model_fallback="gpt2"
+)
+disaster_pipe = load_pipeline(
+    "text-generation",
+    model_meta="tiiuae/falcon-7b-instruct",
+    model_fallback="gpt2"
+)
+market_pipe = load_pipeline(
+    "text-generation",
+    model_meta="tiiuae/falcon-7b-instruct",
+    model_fallback="gpt2"
+)
 
-disaster_pipe = load_pipeline("conversational",
-                              model_meta="meta-llama/Llama-3.1-8B-Instruct",
-                              model_fallback="microsoft/DialoGPT-medium")
-
-market_pipe = load_pipeline("conversational",
-                            model_meta="meta-llama/Llama-3.1-8B-Instruct",
-                            model_fallback="microsoft/DialoGPT-medium")
-
-crop_pipe = load_pipeline("image-to-text",
-                          model_meta="meta-llama/Llama-3.2-11B-Vision-Instruct",
-                          model_fallback="Salesforce/blip-image-captioning-large")
+# Crop Doctor: image-to-text
+crop_pipe = load_pipeline(
+    "image-to-text",
+    model_meta="Salesforce/blip-image-captioning-base"
+)
 
 # ==============================
 # Helper Functions
 # ==============================
 def run_conversational(pipe, prompt: str):
     try:
-        output = pipe(prompt)
+        output = pipe(prompt, max_new_tokens=200)
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)
@@ -106,17 +115,17 @@ def run_conversational(pipe, prompt: str):
 def run_crop_doctor(image_bytes: bytes, symptoms: str):
     try:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple terms."
+        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple language."
         output = crop_pipe(image, prompt=prompt)
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)
     except Exception as e:
         logger.error(f"Crop Doctor pipeline error: {e}")
-        return f"⚠️ Unexpected vision model error: {str(e)}"
+        return f"⚠️ Unexpected model error: {str(e)}"
 
 # ==============================
-# Endpoints
+# ENDPOINTS
 # ==============================
 @app.post("/crop-doctor")
 async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
@@ -150,5 +159,4 @@ async def vector_search(req: VectorRequest, authorization: str | None = Header(N
         results = query_vector(req.query)
         return {"results": results}
     except Exception as e:
-        logger.error(f"Vector search error: {e}")
         return {"error": f"Vector search error: {str(e)}"}

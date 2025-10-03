@@ -12,3 +12,4 @@ torch
 sentencepiece
 kagglehub
 langdetect
+python-multipart

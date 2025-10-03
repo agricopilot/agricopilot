@@ -9,7 +9,7 @@ from PIL import Image
 from vector import query_vector
 
 # ==============================
-# Setup Logging
+# Logging
 # ==============================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AgriCopilot")
@@ -24,7 +24,7 @@ async def root():
     return {"status": "AgriCopilot AI Backend is working perfectly"}
 
 # ==============================
-# AUTH CONFIG
+# Auth
 # ==============================
 PROJECT_API_KEY = os.getenv("PROJECT_API_KEY", "agricopilot404")
 
@@ -66,15 +66,29 @@ class VectorRequest(BaseModel):
 # ==============================
 # HuggingFace Pipelines
 # ==============================
-try:
-    chat_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
-    disaster_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
-    market_pipe = pipeline("conversational", model="microsoft/DialoGPT-medium")
-    crop_pipe = pipeline("image-to-text", model="Salesforce/blip-image-captioning-large")
-    logger.info("All pipelines loaded successfully.")
-except Exception as e:
-    logger.error(f"Error loading pipelines: {e}")
-    raise RuntimeError("Pipelines failed to load. Check model availability.")
+def load_pipeline(task, model_meta, model_fallback):
+    """Try Meta model, fallback to public."""
+    try:
+        return pipeline(task, model=model_meta)
+    except Exception as e:
+        logger.warning(f"Meta model {model_meta} unavailable. Using fallback {model_fallback}.")
+        return pipeline(task, model=model_fallback)
+
+chat_pipe = load_pipeline("conversational",
+                          model_meta="meta-llama/Llama-3.1-8B-Instruct",
+                          model_fallback="microsoft/DialoGPT-medium")
+
+disaster_pipe = load_pipeline("conversational",
+                              model_meta="meta-llama/Llama-3.1-8B-Instruct",
+                              model_fallback="microsoft/DialoGPT-medium")
+
+market_pipe = load_pipeline("conversational",
+                            model_meta="meta-llama/Llama-3.1-8B-Instruct",
+                            model_fallback="microsoft/DialoGPT-medium")
+
+crop_pipe = load_pipeline("image-to-text",
+                          model_meta="meta-llama/Llama-3.2-11B-Vision-Instruct",
+                          model_fallback="Salesforce/blip-image-captioning-large")
 
 # ==============================
 # Helper Functions
@@ -102,43 +116,33 @@ def run_crop_doctor(image_bytes: bytes, symptoms: str):
         return f"⚠️ Unexpected vision model error: {str(e)}"
 
 # ==============================
-# ENDPOINTS
+# Endpoints
 # ==============================
-
-# 🌱 Crop Doctor
 @app.post("/crop-doctor")
-async def crop_doctor(
-    symptoms: str = Header(...),
-    image: UploadFile = File(...),
-    authorization: str | None = Header(None)
-):
+async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
     check_auth(authorization)
     image_bytes = await image.read()
     diagnosis = run_crop_doctor(image_bytes, symptoms)
     return {"diagnosis": diagnosis}
 
-# 🗣 Multilingual Chat
 @app.post("/multilingual-chat")
 async def multilingual_chat(req: ChatRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     reply = run_conversational(chat_pipe, req.query)
     return {"reply": reply}
 
-# 🌪 Disaster Summarizer
 @app.post("/disaster-summarizer")
 async def disaster_summarizer(req: DisasterRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     summary = run_conversational(disaster_pipe, req.report)
     return {"summary": summary}
 
-# 🛒 Marketplace Recommendation
 @app.post("/marketplace")
 async def marketplace(req: MarketRequest, authorization: str | None = Header(None)):
     check_auth(authorization)
     recommendation = run_conversational(market_pipe, req.product)
     return {"recommendation": recommendation}
 
-# 🔍 Vector Search
 @app.post("/vector-search")
 async def vector_search(req: VectorRequest, authorization: str | None = Header(None)):
     check_auth(authorization)

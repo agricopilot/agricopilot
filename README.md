@@ -1,7 +1,7 @@
 # AgriCopilot — Product Overview
 
 ## 🌍 What Is AgriCopilot?
-AgriCopilot is a GenAI-powered super-app for farmers, combining crop care, community, disaster response, and commerce into one unified ecosystem.
+AgriCopilot is a Agentic AI-powered super-app for farmers, combining crop care, community, disaster response, and commerce into one unified ecosystem.
 
 It empowers farmers across Africa and Asia with AI-driven decision support, market access, and collaborative learning — even in low-connectivity environments.
 

@@ -66,37 +66,15 @@ class VectorRequest(BaseModel):
 # ==============================
 # HuggingFace Pipelines
 # ==============================
-def load_pipeline(task: str, model_meta: str, model_fallback: str = None):
-    try:
-        return pipeline(task, model=model_meta)
-    except Exception as e:
-        logger.warning(f"Failed to load {model_meta}: {e}")
-        if model_fallback:
-            logger.info(f"Falling back to {model_fallback}")
-            return pipeline(task, model=model_fallback)
-        raise e
+# Conversational endpoints use text-generation
+chat_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
+disaster_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
+market_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
 
-# Public LLM pipelines (text-generation)
-chat_pipe = load_pipeline(
-    "text-generation",
-    model_meta="tiiuae/falcon-7b-instruct",
-    model_fallback="gpt2"
-)
-disaster_pipe = load_pipeline(
-    "text-generation",
-    model_meta="tiiuae/falcon-7b-instruct",
-    model_fallback="gpt2"
-)
-market_pipe = load_pipeline(
-    "text-generation",
-    model_meta="tiiuae/falcon-7b-instruct",
-    model_fallback="gpt2"
-)
-
-# Crop Doctor: image-to-text
-crop_pipe = load_pipeline(
-    "image-to-text",
-    model_meta="Salesforce/blip-image-captioning-base"
+# Crop Doctor uses Meta Vision-Instruct model
+crop_pipe = pipeline(
+    "image-text-to-text",
+    model="meta-llama/Llama-3.2-11B-Vision-Instruct",
 )
 
 # ==============================
@@ -112,11 +90,21 @@ def run_conversational(pipe, prompt: str):
         logger.error(f"Conversational pipeline error: {e}")
         return f"⚠️ Unexpected model error: {str(e)}"
 
+
 def run_crop_doctor(image_bytes: bytes, symptoms: str):
+    """
+    Diagnose crop issues using Meta's multimodal LLaMA Vision model.
+    The model sees the crop image and reads the farmer's description,
+    then explains the likely disease and simple treatment steps.
+    """
     try:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        prompt = f"Farmer reports: {symptoms}. Diagnose the crop disease and suggest treatment in simple language."
-        output = crop_pipe(image, prompt=prompt)
+        prompt = (
+            f"The farmer reports: {symptoms}. "
+            "Analyze the plant image and diagnose the likely crop disease. "
+            "Then provide a simple explanation and possible treatment steps."
+        )
+        output = crop_pipe(image, prompt)
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)

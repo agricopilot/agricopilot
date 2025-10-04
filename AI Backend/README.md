@@ -168,8 +168,3 @@ Uses **LangChain + FAISS** for semantic search:
 **Team Astra**  
 Innovating the Future of AI for Agriculture 🌱  
 Email: agricopilot@gmail.com
-
----
-
-## 🧭 LICENSE
-Licensed under the **MIT License** — free for research, education, and innovation.

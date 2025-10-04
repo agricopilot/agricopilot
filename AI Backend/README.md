@@ -1,4 +1,4 @@
-# 🌾 AgriCopilot AI Backend
+# AgriCopilot AI Backend
 
 AgriCopilot is an **AI-powered agricultural intelligence platform** developed by **Team Astra**.  
 It combines **Conversational AI**, **Computer Vision**, and **Vector Intelligence** to empower farmers, researchers, and organizations with insights, crop diagnosis, and automated recommendations.
@@ -52,7 +52,7 @@ export HUGGINGFACEHUB_API_TOKEN="hf_your_access_token"
 
 ## ⚙️ INSTALLATION & SETUP
 # Clone the repository
-git clone https://github.com/TeamAstra/AgriCopilot.git
+git clone https://github.com/agricopilot/agricopilot
 cd AgriCopilot
 
 # Create virtual environment

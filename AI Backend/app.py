@@ -95,12 +95,12 @@ def run_crop_doctor(image_bytes: bytes, symptoms: str):
     """
     Diagnose crop issues using Meta's multimodal LLaMA Vision model.
     The model sees the crop image and reads the farmer's description,
-    then explains the likely disease and simple treatment steps.
+    then explains the likely disease, simple treatment steps and future prevention steps.
     """
     try:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         prompt = (
-            f"The farmer reports: {symptoms}. "
+            f"The AI farmer reports: {symptoms}. "
             "Analyze the plant image and diagnose the likely crop disease. "
             "Then provide a simple explanation and possible treatment steps."
         )

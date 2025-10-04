@@ -64,17 +64,39 @@ class VectorRequest(BaseModel):
     query: str
 
 # ==============================
-# HuggingFace Pipelines
+# HuggingFace Pipelines (with token)
 # ==============================
+HF_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+
+if not HF_TOKEN:
+    logger.warning("⚠️ No Hugging Face token found in environment. Gated models may fail to load.")
+else:
+    logger.info("✅ Hugging Face token detected and ready.")
+
 # Conversational endpoints use text-generation
-chat_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
-disaster_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
-market_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct")
+chat_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN
+)
+
+disaster_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN
+)
+
+market_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN
+)
 
 # Crop Doctor uses Meta Vision-Instruct model
 crop_pipe = pipeline(
     "image-text-to-text",
     model="meta-llama/Llama-3.2-11B-Vision-Instruct",
+    token=HF_TOKEN
 )
 
 # ==============================
@@ -95,12 +117,12 @@ def run_crop_doctor(image_bytes: bytes, symptoms: str):
     """
     Diagnose crop issues using Meta's multimodal LLaMA Vision model.
     The model sees the crop image and reads the farmer's description,
-    then explains the likely disease, simple treatment steps and future prevention steps.
+    then explains the likely disease, simple treatment steps, and prevention tips.
     """
     try:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         prompt = (
-            f"The AI farmer reports: {symptoms}. "
+            f"The farmer reports: {symptoms}. "
             "Analyze the plant image and diagnose the likely crop disease. "
             "Then provide a simple explanation and possible treatment steps."
         )
@@ -116,7 +138,11 @@ def run_crop_doctor(image_bytes: bytes, symptoms: str):
 # ENDPOINTS
 # ==============================
 @app.post("/crop-doctor")
-async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
+async def crop_doctor(
+    symptoms: str = Header(...),
+    image: UploadFile = File(...),
+    authorization: str | None = Header(None)
+):
     check_auth(authorization)
     image_bytes = await image.read()
     diagnosis = run_crop_doctor(image_bytes, symptoms)
@@ -147,4 +173,5 @@ async def vector_search(req: VectorRequest, authorization: str | None = Header(N
         results = query_vector(req.query)
         return {"results": results}
     except Exception as e:
+        logger.error(f"Vector search error: {e}")
         return {"error": f"Vector search error: {str(e)}"}

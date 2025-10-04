@@ -1,4 +1,4 @@
-# 🌾 AgriCopilot — Product Overview
+# AgriCopilot — Product Overview
 
 ## 🌍 What Is AgriCopilot?
 AgriCopilot is a GenAI-powered super-app for farmers, combining crop care, community, disaster response, and commerce into one unified ecosystem.
@@ -81,13 +81,6 @@ AgriCopilot empowers farmers to:
 - Build digital literacy and community support  
 
 It bridges **AI innovation** with **grassroots impact**, transforming rural agriculture into a connected, intelligent ecosystem.
-
----
-
-## 🏢 Organization
-Developed by **Alash Studios**  
-Led by **Alasela Babatunde** — Founder, AI Engineer & Thought Leader in Conversational & Agentic AI.  
-Slogan: *"Innovative Minds."*
 
 ---
 

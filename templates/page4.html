@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page_title %}{{ page_title }}{% else %}AgriCopilot - Crop Photo{% endif %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(90, 80, 80);
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .phone-container {
+            width: 375px;
+            height: 667px;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Hide scrollbar */
+        .phone-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .phone-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background-color: #858585;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 1;
+        }
+
+        .top-header {
+            background-color: #2c5530;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .back-icon {
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .upload-button {
+            width: 100%;
+            max-width: 320px;
+            height: 120px;
+            background-color: #2c5530;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.3s;
+            text-align: center;
+        }
+
+        .upload-button:hover {
+            opacity: 0.9;
+        }
+
+        .upload-button i {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .gallery-box {
+            width: 100%;
+            max-width: 320px;
+            height: 120px;
+            background-color: white;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #333;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            text-align: center;
+        }
+
+        .gallery-box:hover {
+            border-color: #2c5530;
+        }
+
+        .gallery-box i {
+            font-size: 1.5rem;
+            color: #2c5530;
+            margin-bottom: 5px;
+        }
+
+        .photo-tips {
+            width: 100%;
+            max-width: 320px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .tips-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            color: #2c5530;
+        }
+
+        .tips-header i {
+            margin-right: 8px;
+            color: #ffd700;
+        }
+
+        .tips-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tips-list li {
+            padding: 8px 0;
+            font-size: 0.9rem;
+            color: #555;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .tips-list li:last-child {
+            border-bottom: none;
+        }
+
+        .tips-list li:before {
+            content: "•";
+            color: #2c5530;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 500px) {
+            .phone-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .phone-notch {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-notch"></div>
+
+        <div class="top-header">
+            <i class="fas fa-arrow-left back-icon"></i>
+            <span>Take or Upload Crop Photo</span>
+        </div>
+
+        <div class="content">
+            <button class="upload-button">
+                <i class="fas fa-camera"></i>
+                Upload Photo of Crop
+            </button>
+
+            <div class="gallery-box">
+                <i class="fas fa-images"></i>
+                Choose From Gallery
+            </div>
+
+            <div class="photo-tips">
+                <div class="tips-header">
+                    <i class="fas fa-lightbulb"></i>
+                    Photo Tips
+                </div>
+                <ul class="tips-list">
+                    <li>Take Clear, Well lit photos</li>
+                    <li>Focus on the affected area</li>
+                    <li>Include healthy parts for comparison</li>
+                    <li>Avoid Blurry or distant shots</li>
+                    <li>Supported formats: {% for format in supported_formats %}{{ format }}{% if not forloop.last %}, {% endif %}{% endfor %}</li>
+                    <li>Maximum file size: {{ max_file_size }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;">
+    <input type="file" id="gallery-input" accept="image/*" style="display: none;">
+
+    <script>
+        // Camera upload functionality
+        function initCameraUpload() {
+            const cameraButton = document.querySelector('.upload-button');
+            const cameraInput = document.getElementById('camera-input');
+
+            cameraButton.addEventListener('click', function() {
+                cameraInput.click();
+            });
+
+            cameraInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    handleFileUpload(file, 'camera');
+                }
+            });
+        }
+
+        // Gallery upload functionality
+        function initGalleryUpload() {
+            const galleryBox = document.querySelector('.gallery-box');
+            const galleryInput = document.getElementById('gallery-input');
+
+            galleryBox.addEventListener('click', function() {
+                galleryInput.click();
+            });
+
+            galleryInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    handleFileUpload(file, 'gallery');
+                }
+            });
+        }
+
+        // Handle file upload
+        function handleFileUpload(file, source) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+            if (file.size > maxSize) {
+                alert('File size too large. Please select an image smaller than 10MB.');
+                return;
+            }
+
+            // Show loading state
+            const buttonText = source === 'camera' ?
+                document.querySelector('.upload-button') :
+                document.querySelector('.gallery-box');
+
+            const originalText = buttonText.innerHTML;
+            buttonText.innerHTML = '<i class="fas fa-spinner fa-spin"></i><br>Uploading...';
+            buttonText.style.pointerEvents = 'none';
+
+            // Upload to server
+            uploadToServer(file, source, buttonText, originalText);
+        }
+
+        // Back button functionality
+        function initBackButton() {
+            const backIcon = document.querySelector('.back-icon');
+            backIcon.addEventListener('click', function() {
+                // Go back to homescreen
+                window.location.href = '/homescreen/';
+            });
+        }
+
+        // Initialize all functionality when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initCameraUpload();
+            initGalleryUpload();
+            initBackButton();
+        });
+
+        // Function to upload file to server (placeholder - implement based on your backend)
+        function uploadToServer(file, source, buttonText, originalText) {
+            // Create FormData for the image upload
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Upload image to server
+            fetch('/upload-crop-image/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Upload successful:', data);
+
+                // Store diagnosis ID in localStorage for use in page5
+                localStorage.setItem('currentDiagnosisId', data.diagnosis_id);
+                localStorage.setItem('uploadedImageUrl', data.image_url);
+
+                // Reset button state
+                buttonText.innerHTML = originalText;
+                buttonText.style.pointerEvents = 'auto';
+
+                // Show success message and navigate to symptoms page
+                alert('Photo uploaded successfully! Now describe the symptoms.');
+                setTimeout(() => {
+                    window.location.href = '/page5/';
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Upload failed:', error);
+
+                // Reset button state on error
+                buttonText.innerHTML = originalText;
+                buttonText.style.pointerEvents = 'auto';
+
+                alert('Upload failed. Please try again. Error: ' + error.message);
+            });
+        }
+
+        // Helper function to get CSRF token (for Django)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

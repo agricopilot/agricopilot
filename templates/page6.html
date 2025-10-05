@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page_title %}{{ page_title }}{% else %}AgriCopilot - Upload Photo{% endif %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(90, 80, 80);
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .phone-container {
+            width: 375px;
+            height: 667px;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Hide scrollbar */
+        .phone-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .phone-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background-color: #f0f0f0;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 1;
+        }
+
+        .top-header {
+            background-color: #2c5530;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            color: white;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+
+        .back-icon {
+            margin-right: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .content {
+            flex: 1;
+            padding: 30px 20px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .photo-canvas {
+            width: 100%;
+            max-width: 320px;
+            height: 200px;
+            background-color: white;
+            border: 2px dashed #e1e1e1;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .photo-canvas img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .photo-canvas.empty {
+            color: #999;
+            font-size: 1rem;
+        }
+
+        .photo-canvas.empty::before {
+            content: "";
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .status-box {
+            width: 100%;
+            max-width: 320px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #2c5530;
+            margin-bottom: 10px;
+        }
+
+        .status-message {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .submit-analysis-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #2c5530;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .submit-analysis-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-analysis-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .symptoms-summary {
+            width: 100%;
+            max-width: 320px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .symptoms-summary h3 {
+            color: #2c5530;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .symptoms-summary p {
+            margin: 5px 0;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .analysis-section {
+            width: 100%;
+            max-width: 320px;
+            margin-bottom: 20px;
+        }
+
+        .change-photo-box {
+            width: 100%;
+            max-width: 320px;
+            background-color: white;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+            justify-content: center;
+        }
+
+        .change-photo-box:hover {
+            border-color: #2c5530;
+        }
+
+        .change-photo-box i {
+            font-size: 1.2rem;
+            color: #2c5530;
+            margin-right: 10px;
+        }
+
+        .change-photo-text {
+            font-size: 0.9rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Analysis Results Styles */
+        .analysis-results {
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .result-icon {
+            font-size: 2rem;
+            color: #2c5530;
+            margin-bottom: 10px;
+        }
+
+        .result-header h2 {
+            color: #2c5530;
+            font-size: 1.5rem;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .diagnosis-result {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2c5530;
+        }
+
+        .diagnosis-result h3 {
+            color: #2c5530;
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .diagnosis-result p {
+            margin: 5px 0;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .treatment-section,
+        .preventive-section {
+            margin-bottom: 15px;
+        }
+
+        .treatment-plan h4,
+        .preventive-measures h4 {
+            color: #2c5530;
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+
+        .treatment-plan ul,
+        .preventive-measures ul {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 0;
+        }
+
+        .treatment-plan li,
+        .preventive-measures li {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .treatment-plan li:last-child,
+        .preventive-measures li:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .action-btn.primary {
+            background-color: #2c5530;
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background-color: #1a3320;
+        }
+
+        .action-btn.secondary {
+            background-color: white;
+            color: #2c5530;
+            border: 2px solid #2c5530;
+        }
+
+        .action-btn.secondary:hover {
+            background-color: #f8f9fa;
+        }
+
+        @media (max-width: 500px) {
+            .phone-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .phone-notch {
+                display: none;
+            }
+
+            .result-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-notch"></div>
+
+        <div class="top-header">
+            <i class="fas fa-arrow-left back-icon"></i>
+            <span>Analysis Results</span>
+        </div>
+
+        <div class="content">
+            <!-- Image Display Section -->
+            <div class="photo-canvas">
+                <img id="crop-image" src="" alt="Uploaded Crop" style="display: none;">
+                <div id="image-placeholder">
+                    <i class="fas fa-image"></i>
+                    <p>Loading image...</p>
+                </div>
+            </div>
+
+            <!-- Symptoms Summary -->
+            <div class="symptoms-summary">
+                <h3>Symptoms & Crop Information</h3>
+                <div id="symptoms-info">
+                    <p>Loading symptoms information...</p>
+                </div>
+            </div>
+
+            <!-- Generate Analysis Button -->
+            <div class="analysis-section">
+                <button class="submit-analysis-btn" id="generate-analysis-btn">
+                    <i class="fas fa-brain"></i>
+                    Generate AI Analysis
+                </button>
+            </div>
+
+            <!-- Analysis Results Section (Initially Hidden) -->
+            <div class="analysis-results" id="analysis-results" style="display: none;">
+                <div class="result-header">
+                    <i class="fas fa-stethoscope result-icon"></i>
+                    <h2>AI Crop Diagnosis</h2>
+                </div>
+
+                <div class="diagnosis-result">
+                    <p>Loading diagnosis results...</p>
+                </div>
+
+                <div class="treatment-section">
+                    <div class="treatment-plan">
+                        <p>Loading treatment recommendations...</p>
+                    </div>
+                </div>
+
+                <div class="preventive-section">
+                    <div class="preventive-measures">
+                        <p>Loading preventive measures...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="result-actions">
+                <button class="action-btn primary" onclick="window.location.href='/homescreen/'">
+                    <i class="fas fa-home"></i>
+                    Back to Home
+                </button>
+                <button class="action-btn secondary" onclick="window.location.href='/page4/'">
+                    <i class="fas fa-camera"></i>
+                    Analyze Another
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="photo-input" accept="image/*" style="display: none;">
+
+    <script>
+        // Get diagnosis ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const pathParts = window.location.pathname.split('/').filter(part => part !== '');
+        const diagnosisId = pathParts[pathParts.length - 1];
+
+        // Back button functionality
+        function initBackButton() {
+            const backIcon = document.querySelector('.back-icon');
+            backIcon.addEventListener('click', function() {
+                window.location.href = '/homescreen/';
+            });
+        }
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Load diagnosis data and display
+        function loadDiagnosisData() {
+            console.log('loadDiagnosisData called');
+            console.log('diagnosisId:', diagnosisId);
+            console.log('diagnosisId type:', typeof diagnosisId);
+            console.log('diagnosisId truthy:', !!diagnosisId);
+
+            if (!diagnosisId) {
+                alert('No diagnosis ID found. Please start over. diagnosisId: ' + diagnosisId);
+                window.location.href = '/page4/';
+                return;
+            }
+
+            console.log('Making API call to:', `/diagnosis/${diagnosisId}/`);
+
+            fetch(`/diagnosis/${diagnosisId}/`, {
+                method: 'GET'
+            })
+            .then(response => {
+                console.log('API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('API response data:', data);
+                displayDiagnosisData(data);
+            })
+            .catch(error => {
+                console.error('Error loading diagnosis data:', error);
+                alert('Error loading diagnosis data. Please try again. Error: ' + error.message);
+                window.location.href = '/page4/';
+            });
+        }
+
+        // Display diagnosis data (image and symptoms)
+        function displayDiagnosisData(data) {
+            // Display image
+            const imageElement = document.getElementById('crop-image');
+            const placeholderElement = document.getElementById('image-placeholder');
+
+            if (data.image_url) {
+                imageElement.src = data.image_url;
+                imageElement.style.display = 'block';
+                placeholderElement.style.display = 'none';
+            } else {
+                placeholderElement.innerHTML = '<i class="fas fa-image"></i><p>No image available</p>';
+            }
+
+            // Display symptoms information
+            const symptomsInfo = document.getElementById('symptoms-info');
+            symptomsInfo.innerHTML = `
+                <p><strong>Crop Type:</strong> ${data.crop_type || 'Not specified'}</p>
+                <p><strong>Symptoms:</strong> ${data.symptoms || 'Not provided'}</p>
+                <p><strong>Uploaded:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+            `;
+
+            // Check if analysis has already been run
+            if (data.diagnosis_result) {
+                displayAnalysisResults(data.diagnosis_result);
+            }
+        }
+
+        // Handle generate analysis button
+        function initGenerateAnalysis() {
+            const generateBtn = document.getElementById('generate-analysis-btn');
+
+            generateBtn.addEventListener('click', function() {
+                // Show loading state
+                const originalText = generateBtn.innerHTML;
+                generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+                generateBtn.disabled = true;
+
+                // Call analysis API
+                fetch(`/run-analysis/${diagnosisId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Analysis result:', data);
+
+                    // Reset button
+                    generateBtn.innerHTML = originalText;
+                    generateBtn.disabled = false;
+
+                    // Display results
+                    displayAnalysisResults(data);
+
+                    // Hide the generate analysis button
+                    document.querySelector('.analysis-section').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Analysis failed:', error);
+
+                    // Reset button
+                    generateBtn.innerHTML = originalText;
+                    generateBtn.disabled = false;
+
+                    alert('Analysis failed. Please try again. Error: ' + error.message);
+                });
+            });
+        }
+
+        // Display analysis results
+        function displayAnalysisResults(result) {
+            // Show results section
+            document.getElementById('analysis-results').style.display = 'block';
+
+            // Update diagnosis information
+            const diagnosisElement = document.querySelector('.diagnosis-result');
+            if (diagnosisElement && result.diagnosis) {
+                diagnosisElement.innerHTML = `
+                    <h3>Diagnosis: ${result.diagnosis.disease || 'Unknown'}</h3>
+                    <p><strong>Affected Crop:</strong> ${result.diagnosis.affected_crop || 'Unknown'}</p>
+                    <p><strong>Description:</strong> ${result.diagnosis.description || 'No description available'}</p>
+                    <p><strong>Confidence:</strong> ${(result.confidence_score * 100).toFixed(1)}%</p>
+                `;
+            }
+
+            // Update treatment recommendations
+            const treatmentElement = document.querySelector('.treatment-plan');
+            if (treatmentElement && result.treatment_recommendations) {
+                treatmentElement.innerHTML = `
+                    <h4>Treatment Recommendations:</h4>
+                    <ul>
+                        ${result.treatment_recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                `;
+            }
+
+            // Update preventive measures
+            const preventiveElement = document.querySelector('.preventive-measures');
+            if (preventiveElement && result.preventive_measures) {
+                preventiveElement.innerHTML = `
+                    <h4>Preventive Measures:</h4>
+                    <ul>
+                        ${result.preventive_measures.map(measure => `<li>${measure}</li>`).join('')}
+                    </ul>
+                `;
+            }
+        }
+
+        // Initialize functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            initBackButton();
+            loadDiagnosisData();
+            initGenerateAnalysis();
+        });
+    </script>
+</body>
+</html>

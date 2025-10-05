@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page_title %}{{ page_title }}{% else %}AgriCopilot{% endif %}</title>
+    {% load static %}
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: rgb(90, 80, 80);
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .phone-container {
+            width: 375px;
+            height: 667px;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background-color: #f0f0f0;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 1;
+        }
+
+        .content {
+            text-align: center;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .leaf-image {
+            width: 160px;
+            height: 160px;
+        }
+
+        .app-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c5530;
+            margin: 0 0 10px 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .app-subtitle {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #4a7c59;
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .buttons-container {
+            margin-top: 40px;
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary {
+            background-color: #2c5530;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: white;
+            color: #2c5530;
+            border: 2px solid #2c5530;
+        }
+
+        .guest-text {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .guest-text:hover {
+            color: #2c5530;
+        }
+
+        @media (max-width: 500px) {
+            .phone-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .phone-notch {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-notch"></div>
+        <div class="content">
+            <img src="{% static 'Images/leaf.png' %}" alt="Leaf" class="leaf-image">
+            <h1 class="app-title">AgriCopilot</h1>
+            <p class="app-subtitle">Smart Farming Assistant</p>
+
+            <div class="buttons-container">
+                <button class="btn btn-primary" onclick="continueInEnglish()">Continue In English</button>
+                <button class="btn btn-secondary" onclick="switchLanguage()">Switch Language</button>
+                <p class="guest-text" onclick="continueAsGuest()">Continue as Guest</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function continueInEnglish() {
+            window.location.href = '/auth/';
+        }
+
+        function switchLanguage() {
+            alert('Language switching coming soon! Defaulting to English.');
+            window.location.href = '/auth/';
+        }
+
+        function continueAsGuest() {
+            // Skip authentication and go directly to homescreen
+            window.location.href = '/homescreen/';
+        }
+    </script>
+</body>
+</html>

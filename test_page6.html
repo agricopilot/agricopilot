@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test Page6</title></head>
+<body>
+    <h1>Testing Page6 URL Extraction</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Simulate the URL extraction logic from page6.html
+        const pathParts = window.location.pathname.split('/').filter(part => part !== '');
+        const diagnosisId = pathParts[pathParts.length - 1];
+        
+        document.getElementById('result').innerHTML = `
+            <p>Current URL: ${window.location.href}</p>
+            <p>Pathname: ${window.location.pathname}</p>
+            <p>Path parts: ${JSON.stringify(pathParts)}</p>
+            <p>Extracted diagnosisId: ${diagnosisId}</p>
+            <p>Is diagnosisId truthy: ${!!diagnosisId}</p>
+        `;
+        
+        // Test the API call
+        if (diagnosisId) {
+            fetch(`http://localhost:8220/diagnosis/${diagnosisId}/`, {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerHTML += `
+                    <h2>API Response:</h2>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML += `
+                    <h2>API Error:</h2>
+                    <p>${error.message}</p>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

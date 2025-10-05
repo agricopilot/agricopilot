@@ -1,6 +1,11 @@
+# ============================================
+# AgriCopilot AI Backend — Optimized Stable Release
+# ============================================
+
 import os
 import logging
 import io
+import torch
 from fastapi import FastAPI, Request, Header, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -9,26 +14,27 @@ from PIL import Image
 from vector import query_vector
 
 # ==============================
-# Setup Logging
+# Logging Setup
 # ==============================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AgriCopilot")
 
 # ==============================
-# App Init
+# FastAPI App Init
 # ==============================
 app = FastAPI(title="AgriCopilot")
 
 @app.get("/")
 async def root():
-    return {"status": "AgriCopilot AI Backend is running and stable."}
+    return {"status": "✅ AgriCopilot AI Backend is running and stable."}
 
 # ==============================
-# AUTH CONFIG
+# Auth Config
 # ==============================
 PROJECT_API_KEY = os.getenv("PROJECT_API_KEY", "agricopilot404")
 
 def check_auth(authorization: str | None):
+    """Verifies Bearer token for all requests."""
     if not PROJECT_API_KEY:
         return
     if not authorization or not authorization.startswith("Bearer "):
@@ -38,7 +44,7 @@ def check_auth(authorization: str | None):
         raise HTTPException(status_code=403, detail="Invalid token")
 
 # ==============================
-# Global Exception Handler
+# Exception Handler
 # ==============================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -46,7 +52,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"error": str(exc)})
 
 # ==============================
-# Request Models
+# Request Schemas
 # ==============================
 class ChatRequest(BaseModel):
     query: str
@@ -61,7 +67,7 @@ class VectorRequest(BaseModel):
     query: str
 
 # ==============================
-# HuggingFace Pipelines (with token)
+# Hugging Face Config
 # ==============================
 HF_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
@@ -70,71 +76,108 @@ if not HF_TOKEN:
 else:
     logger.info("✅ Hugging Face token detected.")
 
-# Lightweight vision + reasoning setup
-chat_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct", token=HF_TOKEN)
-disaster_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct", token=HF_TOKEN)
-market_pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B-Instruct", token=HF_TOKEN)
+# Device setup (GPU if available)
+device = 0 if torch.cuda.is_available() else -1
+logger.info(f"🧠 Using device: {'GPU' if device == 0 else 'CPU'}")
 
-# New lightweight vision backbone (Meta ConvNeXt-Tiny)
+# ==============================
+# Pipelines
+# ==============================
+# Conversational + reasoning models (Meta LLaMA)
+chat_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN,
+    device=device,
+)
+
+disaster_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN,
+    device=device,
+)
+
+market_pipe = pipeline(
+    "text-generation",
+    model="meta-llama/Llama-3.1-8B-Instruct",
+    token=HF_TOKEN,
+    device=device,
+)
+
+# Lightweight Meta Vision backbone (ConvNeXt-Tiny)
 crop_vision = pipeline(
     "image-classification",
     model="facebook/convnext-tiny-224",
-    token=HF_TOKEN
+    token=HF_TOKEN,
+    device=device,
 )
 
 # ==============================
 # Helper Functions
 # ==============================
 def run_conversational(pipe, prompt: str):
-    """Handle conversational pipelines safely."""
+    """Handles conversational tasks safely."""
     try:
-        output = pipe(prompt, max_new_tokens=200)
+        output = pipe(prompt, max_new_tokens=200, temperature=0.7, do_sample=True)
         if isinstance(output, list) and len(output) > 0:
             return output[0].get("generated_text", str(output))
         return str(output)
     except Exception as e:
         logger.error(f"Conversational pipeline error: {e}")
-        return f"⚠️ Unexpected model error: {str(e)}"
+        return f"⚠️ Model error: {str(e)}"
 
 def run_crop_doctor(image_bytes: bytes, symptoms: str):
     """
     Hybrid Crop Doctor System:
-    Combines computer vision (ConvNeXt) + text reasoning (LLaMA) + dataset vector recall.
-    Returns a detailed, farmer-friendly diagnosis and treatment.
+    1. Uses ConvNeXt to classify plant visuals.
+    2. Pulls related info from vector dataset.
+    3. LLaMA 3.1 generates a short diagnosis and treatment guide.
     """
     try:
-        # Step 1: Vision Analysis
+        # --- Step 1: Vision Classification ---
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         vision_results = crop_vision(image)
+        if not vision_results or "label" not in vision_results[0]:
+            raise ValueError("No vision classification result received.")
         top_label = vision_results[0]["label"]
 
-        # Step 2: Knowledge Recall via Vector Search
+        # --- Step 2: Vector Knowledge Recall ---
         vector_matches = query_vector(symptoms)
         related_knowledge = " ".join(vector_matches[:3]) if isinstance(vector_matches, list) else str(vector_matches)
 
-        # Step 3: LLaMA Reasoning
+        # --- Step 3: Reasoning via LLaMA ---
         prompt = (
-            f"A farmer uploaded a maize image that visually shows signs of {top_label}. "
-            f"The farmer also reported the following symptoms: {symptoms}. "
-            f"From the knowledge base, related observations include: {related_knowledge}. "
-            "Generate a short but clear diagnostic report stating the likely disease, "
-            "its cause, treatment method, and simple prevention advice."
+            f"A farmer uploaded a maize image showing signs of '{top_label}'. "
+            f"Reported symptoms: {symptoms}. "
+            f"Knowledge base reference: {related_knowledge}. "
+            "Generate a structured diagnostic report with:\n"
+            "1. Disease Name\n2. Cause\n3. Treatment\n4. Prevention Tips\n"
+            "Keep the explanation short and easy for farmers to understand."
         )
 
-        response = chat_pipe(prompt, max_new_tokens=300)
+        response = chat_pipe(prompt, max_new_tokens=250, temperature=0.6, do_sample=False, truncation=True)
+
+        # Extract text output
         if isinstance(response, list) and len(response) > 0:
-            return response[0].get("generated_text", str(response))
-        return str(response)
+            text = response[0].get("generated_text", "").strip()
+            return text if text else "⚠️ No response generated. Try again with clearer image or symptoms."
+        return "⚠️ Unexpected response format from reasoning model."
 
     except Exception as e:
-        logger.error(f"Crop Doctor pipeline error: {e}")
-        return f"⚠️ Unexpected model error: {str(e)}"
+        logger.error(f"Crop Doctor error: {e}")
+        return f"⚠️ Crop Doctor encountered an issue: {str(e)}"
 
 # ==============================
-# ENDPOINTS
+# Endpoints
 # ==============================
 @app.post("/crop-doctor")
-async def crop_doctor(symptoms: str = Header(...), image: UploadFile = File(...), authorization: str | None = Header(None)):
+async def crop_doctor(
+    symptoms: str = Header(...),
+    image: UploadFile = File(...),
+    authorization: str | None = Header(None)
+):
+    """Diagnose crop disease from image and text."""
     check_auth(authorization)
     image_bytes = await image.read()
     diagnosis = run_crop_doctor(image_bytes, symptoms)
@@ -167,3 +210,7 @@ async def vector_search(req: VectorRequest, authorization: str | None = Header(N
     except Exception as e:
         logger.error(f"Vector search error: {e}")
         return {"error": f"Vector search error: {str(e)}"}
+
+# ============================================
+# END OF FILE
+# ============================================

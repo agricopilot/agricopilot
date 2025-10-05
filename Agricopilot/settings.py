@@ -115,8 +115,8 @@ if USE_AZURE_STORAGE:
     
     print("settings.py loaded")
     # Azure Blob Storage for media and static files
-    DEFAULT_FILE_STORAGE = 'Konexio.custom_storages.AzureMediaStorage'
-    STATICFILES_STORAGE = 'Konexio.custom_storages.AzureStaticStorage'
+    DEFAULT_FILE_STORAGE = 'Agricopilot.custom_storages.AzureMediaStorage'
+    STATICFILES_STORAGE = 'Agricopilot.custom_storages.AzureStaticStorage'
     print("Using Azure Storages")
     
     # Container names
